@@ -84,6 +84,7 @@
      (shell-command-to-string "git ls-files -co --exclude-standard")
      "\n")))
 
+;;;###autoload
 (defun project-plus-find-file (&optional dir)
   "Find file in project at DIR.  If DIR does not contain a project, fall backs to `counsel-find-file'."
   (interactive)
@@ -109,6 +110,7 @@
              (directory-files path 'full "[^\.]")))
           project-plus-search-path)))
 
+;;;###autoload
 (defun project-plus-switch-project ()
   "Switch to project."
   (interactive)
