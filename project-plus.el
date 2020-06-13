@@ -1,4 +1,4 @@
-;;; project-plus.el --- my -*- lexical-binding: t; -*-
+;;; project-plus.el --- light interface of project.el -*- lexical-binding: t; -*-
 
 ;; Package-requires: ((emacs "26") (project "0.3.0") (f "0.20.0"))
 
