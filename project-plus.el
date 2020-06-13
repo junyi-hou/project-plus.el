@@ -58,8 +58,6 @@
                (not (member new-vc-root project-plus-known-projects)))
       (add-to-list 'project-plus-known-projects new-vc-root))))
 
-(add-hook 'find-file-hook #'project-plus--update-known-projects)
-
 (defun project-plus--update-known-projects-file ()
   (with-temp-buffer
     (mapc (lambda (vc-root)
@@ -67,8 +65,6 @@
             (insert "\n"))
           project-plus-known-projects)
     (write-file project-plus-saved-projects-file)))
-
-(add-hook 'kill-emacs-hook #'project-plus--update-known-projects-file)
 
 (defun project-plus-get-root (&optional dir)
   "Return the project root of DIR. If DIR is not given, use `default-directory'.  If there is no project found at DIR, return nil."
@@ -118,6 +114,16 @@
         (projs (append project-plus-known-projects (project-plus--search-path))))
     (project-plus-find-file (completing-read "Switch to: " projs))))
 
+(define-minor-mode project-plus-mode
+  "Light interface for project.el"
+  nil nil nil
+  :global t
+  (if project-plus-mode
+      (progn
+        (add-hook 'kill-emacs-hook #'project-plus--update-known-projects-file)
+        (add-hook 'find-file-hook #'project-plus--update-known-projects)
+        (setq project-plus-known-projects (project-plus-retrieve-known-projects)))
+    (remove-hook 'find-file-hook #'project-plus--update-known-projects)))
 
 (provide 'project-plus)
 ;;; project-plus.el ends here
