@@ -1,12 +1,13 @@
 ;;; project-plus.el --- light interface of project.el -*- lexical-binding: t; -*-
 
-;; Package-requires: ((emacs "26") (project "0.3.0") (f "0.20.0"))
+;; Package-requires: ((emacs "27") (project "0.3.0") (dash "2.2.0") (f "0.20.0"))
 
 ;;; Commentary:
 
 ;;; Code:
 
 (require 'project)
+(require 'dash)
 (require 'f)
 
 (defgroup project-plus nil
@@ -28,6 +29,12 @@
   :type 'list
   :group 'project-plus)
 
+(defcustom project-plus-ignore-path
+	'()
+	"A list of path to ignore if projects are found under those path."
+	:type 'list
+	:group 'project-plus)
+
 (defvar project-plus-known-projects '()
   "A list of known projects.")
 
@@ -43,8 +50,8 @@
   (project-plus--init-saved-projects-file)
   (with-temp-buffer
     (insert-file-contents project-plus-saved-projects-file)
-    (seq-filter (lambda (path) (not (string= path "")))
-                (split-string (buffer-string) "\n"))))
+    (--filter (not (string= it ""))
+							(split-string (buffer-string) "\n"))))
 
 ;; update `project-plus-known-projects' if we are visiting a
 ;; new repository
@@ -52,9 +59,10 @@
   "Update `project-plus-known-projects' if we are visiting a new repository."
   (let ((new-vc-root (project-plus-get-root)))
     (when (and new-vc-root
-               (not (seq-find (lambda (search-path)
-                                (f-parent-of-p search-path new-vc-root))
-                              project-plus-search-path))
+							 (not (--find (f-parent-of-p it new-vc-root)
+														project-plus-ignore-path))
+               (not (--find (f-parent-of-p it new-vc-root)
+														project-plus-search-path))
                (not (member new-vc-root project-plus-known-projects)))
       (add-to-list 'project-plus-known-projects new-vc-root))))
 
@@ -75,7 +83,7 @@
 
 (defun project-plus-get-file-list (dir)
   "Return the file list of the project at DIR via \"git ls-files -zco --exclude-standard\"."
-  (let ((default-directory (gatsby:project-get-root dir)))
+  (let ((default-directory (project-plus-get-root dir)))
     (split-string
      (shell-command-to-string "git ls-files -co --exclude-standard")
      "\n")))
@@ -85,8 +93,8 @@
   "Find file in project at DIR.  If DIR does not contain a project, fall backs to `counsel-find-file'."
   (interactive)
   (let* ((default-directory (or dir default-directory))
-         (proj? (gatsby:project-get-root dir))
-         (collection (when proj? (gatsby:project-get-file-list proj?))))
+         (proj? (project-plus-get-root dir))
+         (collection (when proj? (project-plus-get-file-list proj?))))
     (if proj?
         ;; inside a project
         (thread-last collection
@@ -101,9 +109,8 @@
   (apply #'append
          (mapcar
           (lambda (path)
-            (seq-filter
-             (lambda (dir) (project-plus-get-root dir))
-             (directory-files path 'full "[^\.]")))
+            (--filter (project-plus-get-root it)
+											(directory-files path 'full "[^\.]")))
           project-plus-search-path)))
 
 ;;;###autoload
@@ -122,7 +129,7 @@
       (progn
         (add-hook 'kill-emacs-hook #'project-plus--update-known-projects-file)
         (add-hook 'find-file-hook #'project-plus--update-known-projects)
-        (setq project-plus-known-projects (project-plus-retrieve-known-projects)))
+        (setq project-plus-known-projects (project-plus--retrieve-known-projects)))
     (remove-hook 'find-file-hook #'project-plus--update-known-projects)))
 
 (provide 'project-plus)
